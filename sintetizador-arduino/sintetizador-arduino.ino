@@ -1,81 +1,88 @@
 //#define MODO_CAPACITIVO
 #define MODO_RESISTIVO
 
+//#define SERIE_DEPURACION
+#define SERIE_MIDI
+
+//#define SINTESIS_DIRECTA
+#define SINTESIS_LOG_SEN
+
+//Chequeo de sanidad para los modos de operacion
 #if defined(MODO_CAPACITIVO) && defined(MODO_RESISTIVO)
 #error "Elija solo uno de los modos de operacion"
 #elif !defined(MODO_CAPACITIVO) && !defined(MODO_RESISTIVO)
 #error "Elija uno de los modos de operacion"
 #endif
 
-#ifdef MODO_CAPACITIVO
-#include <CapacitiveSensor.h>
+//Chequeo de sanidad para la operacion del puerto serie
+#if defined(SERIE_DEPURACION) && defined(SERIE_MIDI)
+#error "No se puede depurar y usar comunicacion MIDI a la vez"
 #endif
 
-const byte totalTonos = 16;
+//Chequeo de sanidad para el metodo de sintesis
+#if defined(SINTESIS_DIRECTA) && defined(SINTESIS_LOG_SEN)
+#error "Elija solo un metodo de sintesis"
+#elif !defined(SINTESIS_DIRECTA) && !defined(SINTESIS_LOG_SEN)
+#error "Elija un metodo de sintesis"
+#endif
 
-const word freqNormTonoPF[totalTonos] = {
-  261.63 / (F_CPU / 512.0 / 256) * 256,  //C4
-  293.66 / (F_CPU / 512.0 / 256) * 256,  //D4
-  329.63 / (F_CPU / 512.0 / 256) * 256,  //E4
-  349.23 / (F_CPU / 512.0 / 256) * 256,  //F4
-  392.00 / (F_CPU / 512.0 / 256) * 256,  //G4
-  440.00 / (F_CPU / 512.0 / 256) * 256,  //A4
-  493.88 / (F_CPU / 512.0 / 256) * 256,  //B4
-  523.25 / (F_CPU / 512.0 / 256) * 256,  //C5
+#ifdef SERIE_DEPURACION
+//Si se habiltia la depuracion, se definen las macros para emitir mensajes
+//por el puerto serie
+#define MSG_DEP(m) Serial.print(m)
+#define MSG_DEP_LN(m) Serial.println(m)
+#else
+//Si no se habilita la depuracion, se generan macros nulas que no hacen nada
+#define MSG_DEP(m)
+#define MSG_DEP_LN(m)
+#endif
 
-  523.25 / (F_CPU / 512.0 / 256) * 256,  //C5
-  587.33 / (F_CPU / 512.0 / 256) * 256,  //D5
-  659.25 / (F_CPU / 512.0 / 256) * 256,  //E5
-  698.46 / (F_CPU / 512.0 / 256) * 256,  //F5
-  783.99 / (F_CPU / 512.0 / 256) * 256,  //G5
-  880.00 / (F_CPU / 512.0 / 256) * 256,  //A5
-  987.77 / (F_CPU / 512.0 / 256) * 256,  //B5
-  1046.50 / (F_CPU / 512.0 / 256) * 256, //C6
+//Arreglo con el mapeo de I/O asociado a cada tecla
+const byte totalTeclas = 16;
+const int pinTecla[totalTeclas] = {
+  2, 3, 4, 5, 6, 7, 8, 10, 12, 11, A0, A1, A2, A3, A4, A5,
 };
 
-signed char tablaSintesis[256];
-byte tablaEnvAtq[256];
-byte tablaEnvDec[256];
-byte tablaEnvLib[256];
+//Arreglo con el mapeo de notas asociados a cada tecla
+byte notaTecla[totalTeclas] = {
+  60, //C4
+  62, //D4
+  64, //E4
+  65, //F4
+  67, //G4
+  69, //A4
+  71, //B4
+  72, //C5
 
-//perPasoEnv = tiempo / (Ts * tamTabla) o bien
-//perPasoEnv = tiempo / (ICR1 / F_CPU * tamTablaEnv)
-word perPasoEnvAtq = 0.01 / (512.0 / F_CPU * 256);
-word perPasoEnvDec = 0.25 / (512.0 / F_CPU * 256);
-word perPasoEnvLib = 0.25 / (512.0 / F_CPU * 256);
-
-enum ESTADO_ENVOLVENTE {
-  EE_APAGADA = 0, EE_ATAQUE, EE_DECAIDA, EE_SOSTENIMIENTO,
-  EE_LIBERACION,
+  72, //C5
+  74, //D5
+  76, //E5
+  77, //F5
+  79, //G5
+  81, //A5
+  83, //B5
+  84, //C6
 };
 
-struct ESTADO_VOZ {
-  ESTADO_ENVOLVENTE estadoEnv;
-  byte posTablaEnv;
-  word fraccPosTablaEnv;
-  word posTablaSintPF;
-  byte tono;
-  bool liberarVoz;
-};
-
-const byte totalVoces = 3;
-ESTADO_VOZ voz[totalVoces];
-
+//Estructura con el estado de cada tecla
 struct ESTADO_TECLA {
   bool estAnt;
   bool estAct;
 };
 
-ESTADO_TECLA tecla[totalTonos];
+//Arreglo de estructuras con el estado de todas las teclas
+ESTADO_TECLA tecla[totalTeclas];
 
-const int pinTecla[totalTonos] = {
-  2, 3, 4, 5, 6, 7, 8, 10, 12, 11, A0, A1, A2, A3, A4, A5,
-};
-
+//En caso de habilitarse el modo capacitivo, se incluye la
+//libreria de soporte
 #ifdef MODO_CAPACITIVO
+#include <CapacitiveSensor.h>
+
+//Pin de transmision de los sensores capacitivos
 const int pinSensorTx = 13;
 
-CapacitiveSensor sensorCap[totalTonos] = {
+//Arreglo de sensores capacitivos
+CapacitiveSensor sensorCap[totalTeclas] = {
   CapacitiveSensor(pinSensorTx, pinTecla[0]),
   CapacitiveSensor(pinSensorTx, pinTecla[1]),
   CapacitiveSensor(pinSensorTx, pinTecla[2]),
@@ -96,198 +103,166 @@ CapacitiveSensor sensorCap[totalTonos] = {
 #endif
 
 void setup() {
-  word i;
+  byte i;
 
+  //Inicializa el puerto serie a la mas alta velocidad posible
+  //para minimizar latencia
   Serial.begin(115200);
 
 #ifdef MODO_RESISTIVO
-  pinMode(13, OUTPUT);
-  digitalWrite(13, HIGH);
-
-  for (i = 0; i < totalTonos; i++)
+  //En modo resistivo se colocan todos los I/O como entradas
+  //NOTA: Para usar como makey makey usar INPUT. Para usar de
+  //manera regular, usar INPUT_PULLUP.
+  for (i = 0; i < totalTeclas; i++)
     pinMode(pinTecla[i], INPUT_PULLUP);
 #endif
 
-  for (i = 0; i < 256; i++) {
-    tablaSintesis[i] =
-      (1.0 * sin(2 * PI * float(i) * 1.0 / 256)
-       + 0.0 * sin(2 * PI * float(i) * 3.0 / 256)
-       + 0.0 * sin(2 * PI * float(i) * 5.0 / 256)) * 127;
-      //(0.6 * sin(2 * PI * float(i) * 1.0 / 256)
-      // + 0.3 * sin(2 * PI * float(i) * 3.0 / 256)
-      // + 0.1 * sin(2 * PI * float(i) * 5.0 / 256)) * 127;
+  //Se inicializan las tablas de sintesis
+  inicializarTablas();
 
-    tablaEnvAtq[i] = i;
-    tablaEnvDec[i] = 255 - i / 2;
-    tablaEnvLib[i] = 127 - i / 2;
-    Serial.println(tablaEnvLib[i]);
-  }
-
+  //Se hace una escritura al PWM para causar que se inicialice
+  //el timer
   analogWrite(9, 128);
 
-  //Activa el modulo en modalidad PWM rapido, utilizando ICR1L como
+  //Una vez echado a andar el timer se modifican los registros,
+  //activando la modalidad PWM rapido y utilizando ICR1 como
   //registro de cuenta tope (periodo)
   TCCR1A = 0x82;
   TCCR1B = 0x19;
+  //TCCR1A: COM1A = 10b  - Modo no invertido
+  //        COM1B = 00b  - Operacion de puerto normal
+  //TCCR1B: ICNC1 = 0b   - Cancelacion de ruido apagada
+  //        ICES1 = 0b   - No importa
+  //        CS1   = 001b - CLK_IO / 1 (sin prescala)
+  //TCCR1 A+B: WGM1 = 1110b - PWM Rapido, ICR1 = TOP
 
-  ICR1H = highByte(512);
-  ICR1L = lowByte(512);
-  OCR1AH = highByte(256);
+  //A continuacion se inicializan los registros de cuenta tope
+  //(ICR1) y ciclo de trabajo (OCR1A)
+  ICR1H = highByte(512);  //Rango dinamico de -256 a +255 y
+  ICR1L = lowByte(512);   //Fs = F_OSC / 512 = 31.25KHz
+  OCR1AH = highByte(256); //Ciclo de trabajo inicial a 50%
   OCR1AL = lowByte(256);
 
+  //Con el timer reconfigurado se habilitan las interrupciones
   TIMSK1 |= _BV(TOIE1);
 }
 
 void loop() {
   byte i;
+  static unsigned long tAnt = 0;
+  unsigned long tAct;
 
-  for (i = 0; i < totalTonos; i++) {
-    tecla[i].estAnt = tecla[i].estAct;
+  //Se actualiza el tiempo
+  tAct = millis();
+
+  //Si el tiempo elapsado desde la ultima actualizacion excede
+  //10ms, se procede a leer las teclas/sensores
+  if (tAct - tAnt >= 10) {
+    for (i = 0; i < totalTeclas; i++) {
+      //Guarda el estado anterior de la tecla
+      tecla[i].estAnt = tecla[i].estAct;
 
 #ifdef MODO_RESISTIVO
-    tecla[i].estAct = !digitalRead(pinTecla[i]);
+      //En modo resistivo simplemente se leen los I/O
+      tecla[i].estAct = !digitalRead(pinTecla[i]);
 #endif
 
 #ifdef MODO_CAPACITIVO
-    int capacitancia = sensorCap[i].capacitiveSensor(30);
-    Serial.print(capacitancia);
-    if (capacitancia > 30)
-      tecla[i].estAct = true;
-    else
-      tecla[i].estAct = false;
+      //En modo capacitivo se lee la capacitancia registrada
+      int capacitancia = sensorCap[i].capacitiveSensor(30);
+
+      //Se imprimen las capacitancias solo en depuracion
+      MSG_DEP(capacitancia);
+      if (i == totalTeclas - 1)
+        MSG_DEP_LN();
+
+      //Si la capacitancia excede el umbral, se da la tecla
+      //por activada
+      if (capacitancia > 30)
+        tecla[i].estAct = true;
+      else
+        tecla[i].estAct = false;
 #endif
 
-    if (!tecla[i].estAnt && tecla[i].estAct) {
-      tocarNota(i);
-      Serial.println("H");
+      //Si la tecla se presiona, se toca la nota
+      if (!tecla[i].estAnt && tecla[i].estAct) {
+        tocarNota(notaTecla[i]);
+        MSG_DEP_LN(F("H"));
+      }
+
+      //Si la tecla se libera, se para la nota
+      if (tecla[i].estAnt && !tecla[i].estAct) {
+        pararNota(notaTecla[i]);
+        MSG_DEP_LN(F("L"));
+      }
     }
-    if (tecla[i].estAnt && !tecla[i].estAct) {
-      pararNota(i);
-      Serial.println("L");
-    }
+
+    //Registra el tiempo de esta actializacion
+    tAnt = tAct;
   }
 
-  Serial.println();
-
-  /*
-    for (i = 0; i < totalVoces; i++) {
-      Serial.print(voz[i].estadoEnv);
-    }
-    Serial.println();
-  */
-
-  delay(10);
+#ifdef SERIE_MIDI
+  //Se procesa la trama midi, la cual tambien puede causar
+  //que se toquen o paren notas
+  procesarTramaMidi();
+#endif
 }
 
-void tocarNota(byte tono) {
-  byte i;
+void procesarTramaMidi() {
+  static int estadoMidi = 0;
+  byte dato;
 
-  noInterrupts();
+  while (Serial.available()) {
+    dato = Serial.read();
+    //Serial.write(dato);   //Depuracion solamente
+    switch (estadoMidi) {
+      case 0:
+        //Solo se toman en cuenta los comandos, no los datos
+        //en este estado. Los comandos tienen el MSB en alto
+        if (!(dato & 0x80)) break;
 
-  //Primero se busca si el tono ya se esta reproduciendo en
-  //una voz
-  for (i = 0; i < totalVoces; i++) {
-    //Si se encuentra un tono activo en una voz, se termina
-    //el lazo de busqueda con la variable i conteniendo el
-    //indice de la voz encontrada
-    if (voz[i].estadoEnv != EE_APAGADA && voz[i].tono == tono)
-      break;
-  }
+        //Se verifica si el comando es 0x80, que corresponde
+        //a parar una nota
+        if ((dato & 0xF0) == 0x80)
+          //Este comando solo obedecera al canal 1. Los 4 LSB
+          //codifican el canal que va de 1(0) a 16(15)
+          if ((dato & 0x0F) == 0)
+            estadoMidi = 1;
 
-  //Si la voz no se esta reproduciendo previamente, se busca
-  //cualquier voz que este libre
-  if (i >= totalVoces) {
-    for (i = 0; i < totalVoces; i++) {
-      //Si se encuentra una voz libre, se termina el lazo y
-      //la variable i indica la voz encontrada
-      if (voz[i].estadoEnv == EE_APAGADA)
+        //Se verifica si el comando es 0x90, que corresponde
+        //a iniciar una nota
+        if ((dato & 0xF0) == 0x90)
+          //Solo se obedece el canal 1
+          if ((dato & 0x0F) == 0)
+            estadoMidi = 2;
+        break;
+      case 1:
+        //Se corrobora que el dato recibido no sea un comando
+        if (dato & 0x80) {
+          //Si lo es, se reinicia el automata
+          estadoMidi = 0;
+          break;
+        }
+        //Se para el numero de nota recibida por midi
+        pararNota(dato);
+        estadoMidi = 3;
+        break;
+      case 2:
+        //Se corrobora que el dato recibido no sea un comando
+        if (dato & 0x80) {
+          //Si lo es, se reinicia el automata
+          estadoMidi = 0;
+          break;
+        }
+        //Se inicia el numero de nota recibida por midi
+        tocarNota(dato);
+        estadoMidi = 3;
+        break;
+      case 3:
+        //Los parametros adicionales (volumen de nota) son
+        //ignorados
+        estadoMidi = 0;
         break;
     }
   }
-
-  //Si cualquiera de las 2 busquedas anteriores produjo un
-  //resultado, se activa la voz encontrada
-  if (i < totalVoces) {
-    voz[i].estadoEnv = EE_ATAQUE;
-    voz[i].posTablaEnv = 0;
-    voz[i].fraccPosTablaEnv = 0;
-    //voz[i].posTablaSintPF = 0;
-    voz[i].tono = tono;
-    voz[i].liberarVoz = false;
-  }
-
-  interrupts();
-}
-
-void pararNota(byte tono) {
-  byte i;
-
-  noInterrupts();
-
-  for (i = 0; i < totalVoces; i++) {
-    if (voz[i].estadoEnv != EE_APAGADA && voz[i].tono == tono)
-      voz[i].liberarVoz = true;
-  }
-
-  interrupts();
-}
-
-ISR(TIMER1_OVF_vect) {
-  byte i;
-  int volumen;
-  char muestraVoz;
-  int muestraFinal = 0;
-
-  for (i = 0; i < totalVoces; i++) {
-    switch (voz[i].estadoEnv) {
-      case EE_APAGADA:
-        volumen = 0;
-        break;
-      case EE_ATAQUE:
-        volumen = tablaEnvAtq[voz[i].posTablaEnv];
-        voz[i].fraccPosTablaEnv++;
-        if (voz[i].fraccPosTablaEnv >= perPasoEnvAtq) {
-          voz[i].fraccPosTablaEnv = 0;
-          voz[i].posTablaEnv++;
-          if (voz[i].posTablaEnv == 0)
-            voz[i].estadoEnv = EE_DECAIDA;
-        }
-        break;
-      case EE_DECAIDA:
-        volumen = tablaEnvDec[voz[i].posTablaEnv];
-        voz[i].fraccPosTablaEnv++;
-        if (voz[i].fraccPosTablaEnv >= perPasoEnvDec) {
-          voz[i].fraccPosTablaEnv = 0;
-          voz[i].posTablaEnv++;
-          if (voz[i].posTablaEnv == 0)
-            voz[i].estadoEnv = EE_SOSTENIMIENTO;
-        }
-        break;
-      case EE_SOSTENIMIENTO:
-        volumen = 128;
-        if (voz[i].liberarVoz)
-          voz[i].estadoEnv = EE_LIBERACION;
-        break;
-      case EE_LIBERACION:
-        volumen = tablaEnvLib[voz[i].posTablaEnv];
-        voz[i].fraccPosTablaEnv++;
-        if (voz[i].fraccPosTablaEnv >= perPasoEnvLib) {
-          voz[i].fraccPosTablaEnv = 0;
-          voz[i].posTablaEnv++;
-          if (voz[i].posTablaEnv == 0)
-            voz[i].estadoEnv = EE_APAGADA;
-        }
-        break;
-    }
-
-    muestraVoz =
-      highByte(volumen *
-               tablaSintesis[highByte(voz[i].posTablaSintPF)]);
-    muestraFinal += muestraVoz;
-    voz[i].posTablaSintPF += freqNormTonoPF[voz[i].tono];
-  }
-
-  muestraFinal += 256;
-  OCR1AH = highByte(muestraFinal);
-  OCR1AL = lowByte(muestraFinal);
 }
