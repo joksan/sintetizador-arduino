@@ -42,12 +42,9 @@ void inicializarTablas() {
 
   for (i = 0; i < 256; i++) {
     tablaSintesis[i] =
-      //(0.167 * sin(2 * PI * float(i) * 1.0 / 256)
-      // + 0.167 * sin(2 * PI * float(i) * 2.0 / 256)
-      // + 0.167 * sin(2 * PI * float(i) * 3.0 / 256)) * 127;
-      (0.5 * sin(2 * PI * float(i) * 1.0 / 256)
-       + 0.0 * sin(2 * PI * float(i) * 2.0 / 256)
-       + 0.0 * sin(2 * PI * float(i) * 3.0 / 256)) * 127;
+      (0.167 * sin(2 * PI * float(i) * 1.0 / 256)
+       + 0.167 * sin(2 * PI * float(i) * 2.0 / 256)
+       + 0.167 * sin(2 * PI * float(i) * 3.0 / 256)) * 127;
 
     tablaEnvAtq[i] = i;
     tablaEnvDec[i] = 255 - i / 2;

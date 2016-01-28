@@ -1,16 +1,19 @@
 //#define MODO_CAPACITIVO
-#define MODO_RESISTIVO
+//#define MODO_RESISTIVO
+#define MODO_CONTACTO
 
 //#define SERIE_DEPURACION
 #define SERIE_MIDI
 
-//#define SINTESIS_DIRECTA
-#define SINTESIS_LOG_SEN
+#define SINTESIS_DIRECTA
+//#define SINTESIS_LOG_SEN
 
 //Chequeo de sanidad para los modos de operacion
-#if defined(MODO_CAPACITIVO) && defined(MODO_RESISTIVO)
+#if defined(MODO_CAPACITIVO) + defined(MODO_RESISTIVO) \
+  + defined(MODO_CONTACTO) > 1
 #error "Elija solo uno de los modos de operacion"
-#elif !defined(MODO_CAPACITIVO) && !defined(MODO_RESISTIVO)
+#elif !defined(MODO_CAPACITIVO) && !defined(MODO_RESISTIVO) \
+   && !defined(MODO_CONTACTO)
 #error "Elija uno de los modos de operacion"
 #endif
 
@@ -111,8 +114,13 @@ void setup() {
 
 #ifdef MODO_RESISTIVO
   //En modo resistivo se colocan todos los I/O como entradas
-  //NOTA: Para usar como makey makey usar INPUT. Para usar de
-  //manera regular, usar INPUT_PULLUP.
+  for (i = 0; i < totalTeclas; i++)
+    pinMode(pinTecla[i], INPUT);
+#endif
+
+#ifdef MODO_CONTACTO
+  //En modo de contacto se ponen los I/O como entrada pero se
+  //activa el pullup interno
   for (i = 0; i < totalTeclas; i++)
     pinMode(pinTecla[i], INPUT_PULLUP);
 #endif
@@ -162,8 +170,9 @@ void loop() {
       //Guarda el estado anterior de la tecla
       tecla[i].estAnt = tecla[i].estAct;
 
-#ifdef MODO_RESISTIVO
-      //En modo resistivo simplemente se leen los I/O
+#if defined(MODO_RESISTIVO) || defined(MODO_CONTACTO)
+      //En los modos resistivo y de contacto simplemente se
+      //leen los I/O
       tecla[i].estAct = !digitalRead(pinTecla[i]);
 #endif
 
