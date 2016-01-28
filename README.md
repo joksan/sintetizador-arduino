@@ -35,4 +35,6 @@ Crea los sonidos aplicando multiplicaciones a una tabla de onda sinusoidal. Perm
 - Sintesis por logaritmo de seno:
 Crea los sonidos aplicando tablas de funciones exponenciales y logaritmos de seno. Permite atenuar el volumen en la fase de sostenimiento, pero no se pueden agregar armonicos por causa de la eliminacion del signo de la funcion seno. No viene activado por defecto, pero esta pre-configurado para sonar de manera similar a una marimba.
 
-Creado por Joksan Alvarado, distribuido al publico general bajo licencia GPL Version 3
+Creado por Joksan Alvarado.  
+Codigo distribuido al publico general bajo licencia GPL Version 3.  
+Documentacion distribuida al publico general bajo licencia Creative Commons Reconocimiento-Compartir Igual 4.0: http://creativecommons.org/licenses/by-sa/4.0/deed.es_ES
