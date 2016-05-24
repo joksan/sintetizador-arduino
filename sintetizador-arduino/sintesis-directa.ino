@@ -41,10 +41,52 @@ void inicializarTablas() {
   word i;
 
   for (i = 0; i < 256; i++) {
+    //Sintesis aditiva de 8 armonicas para imitar un piano
     tablaSintesis[i] =
-      (0.167 * sin(2 * PI * float(i) * 1.0 / 256)
-       + 0.167 * sin(2 * PI * float(i) * 2.0 / 256)
-       + 0.167 * sin(2 * PI * float(i) * 3.0 / 256)) * 127;
+      (3.7899e+04 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                     1.0 / 256.0)
+       + 3.1526e+03 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       2.0 / 256.0)
+       + 2.8812e+03 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       3.0 / 256.0)
+       + 5.3975e+03 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       4.0 / 256.0)
+       + 3.3610e+03 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       5.0 / 256.0)
+       + 7.5544e+03 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       6.0 / 256.0)
+       + 8.9620e+02 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       7.0 / 256.0)
+       + 2.2706e+02 / 3.7899e+04 * sin(2.0 * PI * float(i) *
+                                       8.0 / 256.0)
+      ) * 63;
+
+    //Seno, un armonico
+    //tablaSintesis[i] =
+    //  0.5 * sin(2.0 * PI * float(i) * 1.0 / 256.0) * 127;
+
+    //Seno, tres armonicos
+    //tablaSintesis[i] =
+    //  (0.167 * sin(2 * PI * float(i) * 1.0 / 256.0)
+    //   + 0.167 * sin(2 * PI * float(i) * 2.0 / 256.0)
+    //   + 0.167 * sin(2 * PI * float(i) * 3.0 / 256.0)) * 127;
+
+    //Onda rectangular
+    //if (i < 256 / 2)
+    //  tablaSintesis[i] = 31;
+    //else
+    //  tablaSintesis[i] = -31;
+
+    //Onda triangular
+    //if (i < 256 / 4)
+    //  tablaSintesis[i] = 63.0 * float(i)
+    //                     / (256.0 / 4.0);
+    //else if (i < 256 * 3 / 4)
+    //  tablaSintesis[i] = 63.0 * (256.0 / 2.0 - float(i))
+    //                     / (256.0 / 4.0);
+    //else
+    //  tablaSintesis[i] = 63.0 * (float(i) - 256.0)
+    //                     / (256.0 / 4.0);
 
     tablaEnvAtq[i] = i;
     tablaEnvDec[i] = 255 - i / 2;
